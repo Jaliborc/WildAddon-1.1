@@ -5,7 +5,7 @@ for events and has behavior changes plus additional features I wanted that were
 incompatible with Ace.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.1', 3)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 4)
 if not Lib then return end
 
 
@@ -135,7 +135,5 @@ function Lib:NewAddon(name, ...)
 end
 
 function Lib:Embed(object)
-	for k,v in pairs(Embeds) do
-		object[k] = v
-	end
+	MergeTable(object, Embeds)
 end
