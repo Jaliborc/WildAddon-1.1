@@ -15,7 +15,7 @@ GNU General Public License for more details.
 This file is part of WildAddon.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.1', 5)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 6)
 if not Lib then return end
 
 
@@ -70,6 +70,7 @@ local function load()
 end
 
 Lib.Loading = Lib.Loading or {}
+Embeds.None = Embeds.None or setmetatable({}, {__newindex = function() error('None table is immutable.', 2) end})
 EventUtil.RegisterOnceFrameEventAndCallback('PLAYER_LOGIN', function()
 	EventRegistry:RegisterFrameEventAndCallback('ADDON_LOADED', load, Lib)
 	load()
