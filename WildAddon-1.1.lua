@@ -15,20 +15,20 @@ GNU General Public License for more details.
 This file is part of WildAddon.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.1', 6)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 7)
 if not Lib then return end
 
 
 --[[ Locals ]]--
 
-local setmetatable, type, select, pairs, tinsert, tremove = setmetatable, type, select, pairs, tinsert, tremove
-local EventRegistry, MergeTable, CopyTable = EventRegistry, MergeTable, CopyTable
+local setmetatable, type, select, xpcall, pairs, tinsert, tremove = setmetatable, type, select, xpcall, pairs, tinsert, tremove
+local EventRegistry, MergeTable, CopyTable, CallErrorHandler = EventRegistry, MergeTable, CopyTable, CallErrorHandler
 local Embeds = {}
 
 local function safecall(object, key, ...)
 	local func = object[key]
 	if type(func) == 'function' then
-		func(object, ...)
+		xpcall(func, CallErrorHandler, object, ...)
 	end	
 end
 
@@ -63,9 +63,7 @@ end
 
 local function load()
 	while (#Lib.Loading > 0) do
-		local module = tremove(Lib.Loading, 1)
-		safecall(module, 'OnLoad')
-		module.OnLoad = nil
+		safecall(tremove(Lib.Loading, 1), 'OnLoad')
 	end
 end
 
@@ -98,6 +96,9 @@ function Embeds:ContinueOn(event, call, ...)
 end
 
 function Embeds:RegisterSignal(event, call, ...)
+	if type(self[call or event] or call) ~= 'function' then
+		print(event, call)
+	end
 	EventRegistry:RegisterCallback(self.Tag .. event, self[call or event] or call, self, ...)
 end
 
