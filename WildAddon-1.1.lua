@@ -15,7 +15,7 @@ GNU General Public License for more details.
 This file is part of WildAddon.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.1', 7)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 8)
 if not Lib then return end
 
 
@@ -88,7 +88,11 @@ function Embeds:RegisterEvent(event, call, ...)
 end
 
 function Embeds:UnregisterEvent(event)
-	EventRegistry:UnregisterFrameEventAndCallback(event, self)
+	for _, table in pairs(EventRegistry:GetCallbackTables()) do
+		if table[event][self] then -- EventRegistry does not check, must check ourselves
+			return EventRegistry:UnregisterFrameEventAndCallback(event, self)
+		end
+	end
 end
 
 function Embeds:ContinueOn(event, call, ...)
@@ -96,9 +100,6 @@ function Embeds:ContinueOn(event, call, ...)
 end
 
 function Embeds:RegisterSignal(event, call, ...)
-	if type(self[call or event] or call) ~= 'function' then
-		print(event, call)
-	end
 	EventRegistry:RegisterCallback(self.Tag .. event, self[call or event] or call, self, ...)
 end
 
