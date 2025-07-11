@@ -15,7 +15,7 @@ GNU General Public License for more details.
 This file is part of WildAddon.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.1', 8)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 9)
 if not Lib then return end
 
 
@@ -89,7 +89,7 @@ end
 
 function Embeds:UnregisterEvent(event)
 	for _, table in pairs(EventRegistry:GetCallbackTables()) do
-		if table[event][self] then -- EventRegistry does not check, must check ourselves
+		if table[event] and table[event][self] then -- EventRegistry does not check, must check ourselves
 			return EventRegistry:UnregisterFrameEventAndCallback(event, self)
 		end
 	end
