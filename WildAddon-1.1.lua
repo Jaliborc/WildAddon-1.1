@@ -15,15 +15,43 @@ GNU General Public License for more details.
 This file is part of WildAddon.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.1', 9)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 10)
 if not Lib then return end
 
 
 --[[ Locals ]]--
 
-local setmetatable, type, select, xpcall, pairs, tinsert, tremove = setmetatable, type, select, xpcall, pairs, tinsert, tremove
+local setmetatable, type, select, xpcall, pcall, pairs, tinsert, tremove = setmetatable, type, select, xpcall, pcall, pairs, tinsert, tremove
 local EventRegistry, MergeTable, CopyTable, CallErrorHandler = EventRegistry, MergeTable, CopyTable, CallErrorHandler
 local Embeds = {}
+
+local Closures = setmetatable({}, {__index =
+	function(t,n)
+		local args = {}
+		for i = 1, n do
+			args[i] = strchar(96 + i)
+		end
+		
+		local argsList = table.concat(args, ', ')
+		local code = format([[
+			return function(f, %s)
+				return function(event, ...)
+					return f(%s, ...)
+				end
+			end
+		]], argsList, argsList)
+
+		local func = loadstring(code)()
+		t[n] = func
+		return func
+	end
+})
+
+local function getmethod(object, key, call, ...)
+	local n = select('#', ...) + 1
+	local method = object[call or key] or call
+	return Closures[n](method, object, ...)
+end
 
 local function safecall(object, key, ...)
 	local func = object[key]
@@ -68,11 +96,10 @@ local function load()
 end
 
 Lib.Loading = Lib.Loading or {}
-Embeds.None = Embeds.None or setmetatable({}, {__newindex = function() error('None table is immutable.', 2) end})
-EventUtil.RegisterOnceFrameEventAndCallback('PLAYER_LOGIN', function()
-	EventRegistry:RegisterFrameEventAndCallback('ADDON_LOADED', load, Lib)
-	load()
-end)
+Lib.Calls = Lib.Calls or LibStub('CallbackHandler-1.0'):New(Lib, 'Register', 'Unregister', 'UnregisterAll')
+Lib.Calls.OnUnused = function(_,_, event) pcall(Lib.Frame.UnregisterEvent, Lib.Frame, event) end
+Lib.Frame = Lib.Frame or CreateFrame('Frame')
+Lib.Frame:SetScript('OnEvent', Lib.Calls.Fire)
 
 
 --[[ Addon/Module API ]]--
@@ -83,41 +110,35 @@ function Embeds:NewModule(...)
 	return module
 end
 
-function Embeds:RegisterEvent(event, call, ...)
-	EventRegistry:RegisterFrameEventAndCallback(event, self[call or event] or call, self, ...)
+function Embeds:ContinueOn(event, ...)
+	local method = getmethod(self, event, ...)
+	
+	Lib.Frame:RegisterEvent(event)
+	Lib.Register(self, event, function(...)
+		Lib.Unregister(self, event)
+		return method(...)
+	end)
 end
 
-function Embeds:UnregisterEvent(event)
-	for _, table in pairs(EventRegistry:GetCallbackTables()) do
-		if table[event] and table[event][self] then -- EventRegistry does not check, must check ourselves
-			return EventRegistry:UnregisterFrameEventAndCallback(event, self)
-		end
-	end
+function Embeds:RegisterEvent(event, ...)
+	Lib.Register(self, event, getmethod(self, event, ...))
+	Lib.Frame:RegisterEvent(event)
 end
 
-function Embeds:ContinueOn(event, call, ...)
-	EventUtil.RegisterOnceFrameEventAndCallback(event, GenerateClosure(self[call or event] or call, self), ...)
-end
-
-function Embeds:RegisterSignal(event, call, ...)
-	EventRegistry:RegisterCallback(self.Tag .. event, self[call or event] or call, self, ...)
+function Embeds:RegisterSignal(event, ...)
+	Lib.Register(self, self.Tag .. event, getmethod(self, event, ...))
 end
 
 function Embeds:UnregisterSignal(event)
-	EventRegistry:UnregisterCallback(self.Tag .. event, self)
+	Lib.Unregister(self, self.Tag .. event)
 end
 
 function Embeds:SendSignal(event, ...)
-	EventRegistry:TriggerEvent(self.Tag .. event, ...)
-end
+	event = self.Tag .. event
+	Lib.Calls:Fire(event, ...)
 
-function Embeds:UnregisterAll()
-	for _, table in pairs(EventRegistry:GetCallbackTables()) do
-		for event, callbacks in pairs(table) do
-			if callbacks[self] then
-				EventRegistry:UnregisterFrameEventAndCallback(event, self)
-			end
-		end
+	if EventTrace then
+		EventTrace:LogCallbackRegistryEvent('WildAddon', event, ...)
 	end
 end
 
@@ -137,6 +158,13 @@ function Embeds:SetDefaults(target, defaults)
 	defaults.__index = defaults
 	return setmetatable(target, defaults)
 end
+
+Embeds.None = setmetatable({}, {__newindex = function() error('None table is immutable.', 2) end, __metatable = false})
+Embeds.UnregisterEvent, Embeds.UnregisterAll = Lib.Unregister, Lib.UnregisterAll
+Embeds:ContinueOn('PLAYER_LOGIN', function()
+	Embeds:RegisterEvent('ADDON_LOADED', load)
+	load()
+end)
 
 
 --[[ Public API ]]--
