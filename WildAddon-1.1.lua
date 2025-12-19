@@ -15,7 +15,7 @@ GNU General Public License for more details.
 This file is part of WildAddon.
 ]]--
 
-local Lib = LibStub:NewLibrary('WildAddon-1.1', 10)
+local Lib = LibStub:NewLibrary('WildAddon-1.1', 11)
 if not Lib then return end
 
 
@@ -159,6 +159,7 @@ function Embeds:SetDefaults(target, defaults)
 	return setmetatable(target, defaults)
 end
 
+Embeds.Yup = function() return true end
 Embeds.None = setmetatable({}, {__newindex = function() error('None table is immutable.', 2) end, __metatable = false})
 Embeds.UnregisterEvent, Embeds.UnregisterAll = Lib.Unregister, Lib.UnregisterAll
 Embeds:ContinueOn('PLAYER_LOGIN', function()
