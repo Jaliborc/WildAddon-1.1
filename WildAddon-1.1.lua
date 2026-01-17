@@ -1,5 +1,5 @@
 --[[
-2019-2024 João Cardoso
+2019-2026 João Cardoso
 WildAddon is distributed under the terms of the GNU General Public License (Version 3).
 As a special exception, the copyright holders of this library give you permission to embed it
 with independent modules to produce an addon, regardless of the license terms of these
